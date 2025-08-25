@@ -1,0 +1,8 @@
+node_modules
+dist
+coverage
+*.log
+pnpm-lock.yaml
+
+src/**/*.js
+src/**/*.js.map
