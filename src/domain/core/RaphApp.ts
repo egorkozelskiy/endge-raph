@@ -1,0 +1,553 @@
+import type {
+  DataAdapter,
+  DataObject,
+  DataPathDef,
+  PhaseDirty,
+  RaphOptions,
+  RaphScheduler,
+  Undefinable,
+} from 'domain/types/base.types'
+import { SchedulerType } from '@/domain/types/base.types'
+import { DefaultDataAdapter } from '@/domain/entities/DataAdapter'
+import type { RaphNode } from '@/domain/core/RaphNode'
+import { RaphRouter } from '@/domain/core/RaphRouter'
+import type {
+  PhaseEvent,
+  PhaseName,
+  RaphPhase,
+} from '@/domain/types/phase.types'
+import { DepGraph } from '@/domain/entities/DepGraph'
+import { DataPath } from '@/domain/entities/DataPath'
+import { MinHeap } from '@/domain/entities/MinHeap'
+
+export class RaphApp {
+  //
+  // Константы
+  //
+  private _maxUps = 60
+  private _minUpdateInterval = 1000 / 60
+  private static readonly PRIORITY_SCALE = 1 << 20 // ~1 млн: с запасом для weight
+
+  //
+  // Подмодули
+  //
+  private _dataAdapter: DataAdapter = new DefaultDataAdapter()
+  private _nodeRouter: RaphRouter<RaphNode> = new RaphRouter()
+  private _phaseRouter: RaphRouter<PhaseName> = new RaphRouter()
+  private _graph: DepGraph = new DepGraph()
+
+  //
+  // Планировщик для запуска фаз
+  //
+  private _scheduler: RaphScheduler = (cb) => cb()
+  private _schedulerType: SchedulerType = SchedulerType.AnimationFrame
+  private _schedulerPending = false
+
+  //
+  // Данные (Dirty логика)
+  //
+  private _dirty = new Map<PhaseName, PhaseDirty>()
+  private _phaseBits = new Map<PhaseName, number>() // фаза -> бит
+
+  //
+  // Фазы
+  //
+  private _phasesArray: RaphPhase[] = []
+  private _phasesMap: Map<PhaseName, RaphPhase> = new Map()
+
+  //
+  // Debug
+  //
+  private __ups = 0
+  private __lastUPSUpdate = performance.now()
+  private __upsCount = 0
+  private __isLoopActive = false
+  private __lastTime = performance.now()
+  private __animationFrameId: number | null = null
+  private __upsResetTimeout: number | null = null
+
+  //
+  //
+  constructor() {}
+
+  /**
+   * Изменение опций
+   */
+  options(opts: Partial<RaphOptions>): void {
+    if (opts.maxUps !== undefined) this._maxUps = opts.maxUps
+    if (opts.adapter !== undefined) this._dataAdapter = opts.adapter
+    if (opts.scheduler !== undefined) {
+      this.setScheduler(opts.scheduler)
+    }
+
+    //
+    this._minUpdateInterval = 1000 / this._maxUps
+  }
+
+  /**
+   * Определяет все фазы разом.
+   * Сохраняет их и в массив (для последовательного обхода),
+   * и в Map (для быстрого доступа по имени).
+   */
+  definePhases(phases: RaphPhase[]): void {
+    this._phasesArray = phases
+    this._phasesMap.clear()
+
+    this._phaseBits.clear()
+    phases.forEach((p, i) => this._phaseBits.set(p.name, 1 << i))
+
+    // Пересобираем фазовый роутер с нуля: маска -> имя фазы
+    this._phaseRouter = new RaphRouter<PhaseName>()
+    for (const phase of phases) {
+      this._phasesMap.set(phase.name, phase)
+      for (const mask of phase.routes ?? []) {
+        // если список маршрутов пуст — фаза никогда не триггерится по данным
+        this._phaseRouter.add(mask, phase.name)
+      }
+    }
+  }
+
+  /**
+   * Получить узел по ID
+   */
+  getNode(id: string): RaphNode | undefined {
+    return this._graph.getNode(id)
+  }
+
+  /**
+   * Добавляет узел в корневой узел
+   */
+  addNode(node: RaphNode): void {
+    return this._graph.addNode(node)
+  }
+
+  /**
+   * Удалить зарегистрированный узел из RaphApp.
+   */
+  removeNode(node: RaphNode): void {
+    this._graph.removeNode(node.id)
+  }
+
+  addDependency(parent: RaphNode, child: RaphNode): boolean {
+    return this._graph.addEdge(parent.id, child.id)
+  }
+
+  removeDependency(parent: RaphNode, child: RaphNode): void {
+    this._graph.removeEdge(parent.id, child.id)
+  }
+
+  /**
+   * Установить планировщик для запуска фаз
+   */
+  setScheduler(mode: SchedulerType): void {
+    if (mode === SchedulerType.Microtask) {
+      this._scheduler = (cb) => queueMicrotask(cb)
+    } else if (mode === SchedulerType.AnimationFrame) {
+      this._scheduler = (cb) => requestAnimationFrame(cb)
+    } else {
+      this._scheduler = (cb) => cb()
+    }
+    this._schedulerType = mode
+  }
+
+  /**
+   * Уведомление об изменении данных.
+   * Вызывается при изменении данных в RaphApp.
+   */
+  notify(path: DataPathDef, opts?: { invalidate?: boolean }): void {
+    const { invalidate = true } = opts ?? {}
+
+    const evtPath = DataPath.from(path)
+    if (this._phasesArray.length === 0) return
+
+    // 1) Какие фазы вообще интересуются этим путём?
+    const phaseHits = this._phaseRouter.matchIncludingPrefix(evtPath) // Set<PhaseName>
+    if (phaseHits.size === 0) return
+
+    // 2) Базовый набор нод по событию — один раз для всех фаз
+    // const baseNodes = this._nodeRouter.matchIncludingPrefix(evtPath)
+
+    const matchesWithParams =
+      this._nodeRouter.matchIncludingPrefixWithParams?.(evtPath) ?? []
+
+    const nodeParams = new Map<string, Record<string, unknown>>()
+
+    let baseNodes = new Set<RaphNode>()
+    if (matchesWithParams.length) {
+      for (const m of matchesWithParams) {
+        baseNodes.add(m.payload)
+        nodeParams.set(m.payload.id, m.params ?? {})
+      }
+    } else {
+      // фоллбек на старый Set без params
+      baseNodes = this._nodeRouter.match(evtPath) as Set<RaphNode>
+    }
+
+    // 3) Мемоизация расширений по типу traversal, чтобы не пересчитывать
+    const expandedCache = new Map<
+      'dirty-only' | 'dirty-and-down' | 'dirty-and-up' | 'all',
+      Set<RaphNode>
+    >()
+
+    const getExpanded = (
+      traversal: 'dirty-only' | 'dirty-and-down' | 'dirty-and-up' | 'all',
+    ): Set<RaphNode> => {
+      let s = expandedCache.get(traversal)
+      if (s) return s
+
+      if (traversal === 'all') {
+        s = this._graph.expandByTraversal(null, 'all')
+      } else {
+        s =
+          baseNodes.size > 0
+            ? this._graph.expandByTraversal(baseNodes, traversal)
+            : new Set()
+      }
+      expandedCache.set(traversal, s)
+      return s
+    }
+
+    // 4) Для каждой фазы раскладываем соответствующие ноды в бакеты
+    for (const phaseName of phaseHits) {
+      const phase = this._phasesMap.get(phaseName)
+      if (!phase) continue
+
+      if (phase.traversal !== 'all' && baseNodes.size === 0) {
+        // нет базовых нод — фаза со специальным обходом не сработает
+        continue
+      }
+
+      const expanded = getExpanded(phase.traversal)
+      if (expanded.size === 0) continue
+
+      for (const node of expanded) {
+        this.dirty(phase.name, node, {
+          invalidate,
+          event: { path: evtPath, params: nodeParams.get(node.id) },
+        })
+      }
+    }
+  }
+
+  /**
+   * Пометить узел dirty в фазе
+   */
+  dirty(
+    phase: PhaseName,
+    node: RaphNode,
+    opts?: { invalidate: boolean; event?: PhaseEvent },
+  ): void {
+    const phaseInstance = this._phasesMap.get(phase)
+    if (!phaseInstance) {
+      console.warn(`[RaphApp] Phase "${phase}" not found`)
+      return
+    }
+
+    // Фильтр по узлам (массив типов)
+    if (
+      phaseInstance.nodes &&
+      Array.isArray(phaseInstance.nodes) &&
+      !phaseInstance.nodes.includes(node.type)
+    ) {
+      return
+    }
+
+    // Фильтр по узлам (лямбда-функция)
+    if (
+      phaseInstance.nodes &&
+      typeof phaseInstance.nodes === 'function' &&
+      !phaseInstance.nodes(node)
+    ) {
+      return
+    }
+
+    const { invalidate = true, event } = opts ?? {}
+
+    const bit = this._phaseBits.get(phase) ?? 0
+    if (bit && (node as any)['__dirtyPhasesMask'] & bit) return
+
+    const idx = this._priority(node)
+    const q = this._getPhaseDirty(phase)
+
+    let arr = q.buckets.get(idx)
+    if (!arr) {
+      arr = []
+      q.buckets.set(idx, arr)
+    }
+    arr.push(node)
+
+    if (!q.inHeap.has(idx)) {
+      q.inHeap.add(idx)
+      q.heap.push(idx)
+    }
+
+    if (event) {
+      const list = q.events.get(node.id)
+      if (list) list.push(event)
+      else q.events.set(node.id, [event])
+    }
+
+    if (bit) (node as any)['__dirtyPhasesMask'] |= bit
+    if (invalidate) this.invalidate()
+  }
+
+  /**
+   * Итерация реактивного графа.
+   * Обновляет грязные узлы в контексте фаз.
+   * Если грязных узлов нет — ничего не делает.
+   */
+  run(): void {
+    const now = performance.now()
+    this.__upsCount++
+    if (now - this.__lastUPSUpdate >= 1000) {
+      this.__ups = this.__upsCount
+      this.__upsCount = 0
+      this.__lastUPSUpdate = now
+    }
+
+    if (!this.loopEnabled) {
+      if (this.__upsResetTimeout !== null) {
+        clearTimeout(this.__upsResetTimeout)
+      }
+      this.__upsResetTimeout = setTimeout(() => {
+        this.__ups = 0
+        this.__upsResetTimeout = null
+      }, 1500) as any as number
+    }
+
+    for (const phase of this._phasesArray) {
+      const q = this._dirty.get(phase.name)!
+      if (!q || q.inHeap.size === 0) continue
+
+      while (!q.heap.empty) {
+        const bucketIdx = q.heap.pop()!
+        q.inHeap.delete(bucketIdx)
+
+        const arr = q.buckets.get(bucketIdx)
+        if (!arr || arr.length === 0) continue
+
+        for (let i = 0; i < arr.length; i++) {
+          const node = arr[i]
+          const events = q.events?.get(node.id) ?? undefined
+          const bit = this._phaseBits.get(phase.name) ?? 0
+          if (bit) (node as any)['__dirtyPhasesMask'] &= ~bit
+          phase.executor({ phase: phase.name, node, events })
+        }
+
+        // Было: arr.length = 0 (оставляли пустой массив в Map).
+        // Станет: удаляем ключ, чтобы Map не росла бесконечно.
+        q.buckets.delete(bucketIdx)
+        q.events.clear()
+      }
+    }
+  }
+
+  /**
+   * Получить значение по пути.
+   */
+  get(
+    path: DataPathDef,
+    opts?: {
+      vars?: Record<string, any>
+    },
+  ): Undefinable<unknown> {
+    return this._dataAdapter.get(path, opts)
+  }
+
+  /**
+   * Установить значение по пути.
+   */
+  set(
+    path: DataPathDef,
+    value: unknown,
+    opts?: { invalidate?: boolean; vars?: Record<string, any> },
+  ): void {
+    this._dataAdapter.set(path, value, opts)
+    this.notify(path, opts)
+  }
+
+  /**
+   * Слияние значение по пути.
+   */
+  merge(
+    path: DataPathDef,
+    value: unknown,
+    opts?: { invalidate?: boolean; vars?: Record<string, any> },
+  ): void {
+    this._dataAdapter.merge(path, value, opts)
+    this.notify(path, opts)
+  }
+
+  /**
+   * Удалить значение по пути.
+   */
+  delete(
+    path: DataPathDef,
+    opts?: { invalidate?: boolean; vars?: Record<string, any> },
+  ): void {
+    this._dataAdapter.delete(path, opts)
+    this.notify(path, opts)
+  }
+
+  /**
+   * Запускает цикл обновления по
+   * заданному планировщику
+   */
+  startLoop(): void {
+    if (this.__isLoopActive) return
+    this.__isLoopActive = true
+
+    const loop = (time: number): void => {
+      if (!this.__isLoopActive) return
+
+      this.invalidate()
+
+      if (this._schedulerType === SchedulerType.AnimationFrame) {
+        this.__animationFrameId = requestAnimationFrame(loop)
+      } else {
+        queueMicrotask(() => loop(performance.now()))
+      }
+    }
+
+    loop(this.__lastTime)
+  }
+
+  /**
+   * Остановить цикл обновления.
+   */
+  stopLoop(): void {
+    this.__isLoopActive = false
+    this.__ups = 0
+    if (this.__animationFrameId !== null) {
+      cancelAnimationFrame(this.__animationFrameId)
+      this.__animationFrameId = null
+    }
+    if (this.__upsResetTimeout !== null) {
+      clearTimeout(this.__upsResetTimeout)
+      this.__upsResetTimeout = null
+    }
+  }
+
+  /**
+   * Функция, которая помечает core, требующим обновления.
+   * Однако обновления произойдет только, если есть грязные узлы.
+   */
+  invalidate(): void {
+    if (this._schedulerPending) return
+
+    this._schedulerPending = true
+    this._scheduler(() => {
+      this._schedulerPending = false
+      this.run()
+    })
+  }
+
+  /**
+   * Полная очистка RaphApp состояния
+   */
+  reset(): void {
+    // Удаляем всех потомков _root-ноды
+
+    // ToDo:
+
+    this._nodeRouter.removeAll()
+  }
+
+  //
+  // PRIVATE
+  //
+
+  /**
+   * Зарегистрировать зависимость ноды от пути/маски.
+   * dep может быть: строка ("rows[0].x"), DataPath или plain-JSON.
+   * Возвращает стабильный ключ (бренд-строку), по которому хранится подписка.
+   */
+  track(node: RaphNode, mask: DataPathDef): void {
+    this._nodeRouter.add(mask, node)
+  }
+
+  /**
+   * Снять зависимость ноды. Если dep не передан — снимаем все зависимости ноды.
+   */
+  untrack(node: RaphNode, mask?: DataPathDef): void {
+    if (!mask) {
+      // Снимаем все зависимости
+      this._nodeRouter.removePayload(node)
+      return
+    }
+
+    this._nodeRouter.remove(mask, node)
+  }
+
+  //
+  // PRIVATE
+  //
+
+  private _getPhaseDirty(phase: PhaseName): PhaseDirty {
+    let q = this._dirty.get(phase)
+    if (!q) {
+      q = {
+        buckets: new Map(),
+        heap: new MinHeap(),
+        inHeap: new Set(),
+        events: new Map(),
+      }
+      this._dirty.set(phase, q)
+    }
+    return q
+  }
+
+  private _priority(node: RaphNode): number {
+    // depth растёт - индекс растёт - обрабатываем раньше те, у кого depth меньше.
+    // внутри одного depth: больший weight должен пойти раньше,
+    // поэтому вычитаем weight (меньший индекс = выше приоритет).
+    const depth = this._graph.getDepth(node)
+    return depth * RaphApp.PRIORITY_SCALE - node.weight
+  }
+
+  //
+  // GETTERS / SETTERS
+  //
+
+  get data(): DataObject {
+    return this._dataAdapter.root()
+  }
+
+  get loopEnabled(): boolean {
+    return this.__isLoopActive
+  }
+
+  get maxUps(): number {
+    return this._maxUps
+  }
+
+  get minUpdateInterval(): number {
+    return this._minUpdateInterval
+  }
+
+  get weightLimit(): number {
+    return this._weightLimit
+  }
+
+  get maxDepth(): number {
+    return this._maxDepth
+  }
+
+  get totalBuckets(): number {
+    return this._totalBuckets
+  }
+
+  get dataAdapter(): DataAdapter {
+    return this._dataAdapter
+  }
+
+  // Возвращает фазы в порядке исполнения
+  get phases(): ReadonlyArray<RaphPhase> {
+    return this._phasesArray
+  }
+
+  // Быстрый доступ к фазе по имени
+  getPhase(name: PhaseName): RaphPhase | undefined {
+    return this._phasesMap.get(name)
+  }
+}

@@ -1,0 +1,41 @@
+{
+  "name": "@endge/raph",
+  "private": false,
+  "version": "2.0.0",
+  "description": "Reactive application pipeline & router (Raph) — core library",
+  "license": "Apache-2.0",
+  "type": "module",
+  "module": "./dist/raph.js",
+  "types": "./dist/main.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/main.d.ts",
+      "import": "./dist/raph.js",
+      "require": "./dist/raph.cjs"
+    }
+  },
+
+  "files": [
+    "dist"
+  ],
+  "sideEffects": false,
+  "scripts": {
+    "clean": "rimraf dist tsconfig.tsbuildinfo",
+    "dev": "vite build --watch",
+    "build": "vue-tsc --noCheck && vite build",
+    "preview": "vite preview",
+    "test": "vitest"
+  },
+  "devDependencies": {
+    "typescript": "^5.5.4",
+    "vitest": "^2.1.9",
+    "@vitest/coverage-v8": "^2.1.9",
+    "eslint": "^9.9.0",
+    "@typescript-eslint/parser": "^8.7.0",
+    "@typescript-eslint/eslint-plugin": "^8.7.0",
+    "rimraf": "^6.0.1",
+    "vite": "^6.1.0",
+    "vite-plugin-dts": "^4.5.0",
+    "vue-tsc": "^2.2.0"
+  }
+}
