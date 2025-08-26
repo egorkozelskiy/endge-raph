@@ -127,6 +127,13 @@ app.definePhases([
 ])
 ```
 
+
+# Быстрый старт
+
+```bash
+npm install @endge/raph
+```
+
 # Development
 
 Библиотека находится в активной разработке.

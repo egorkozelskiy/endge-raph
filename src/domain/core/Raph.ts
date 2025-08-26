@@ -57,7 +57,7 @@ export class Raph {
         routes: ['__signals.*'],
         nodes: (node: RaphNode) => node instanceof RaphSignal,
         executor: (ctx: PhaseExecutorContext) => {
-          (ctx.node as RaphSignal<any>).update()
+          ;(ctx.node as RaphSignal<any>).update()
         },
       },
       //
@@ -69,7 +69,7 @@ export class Raph {
         routes: ['__signals.*'],
         nodes: (node: RaphNode) => node instanceof RaphEffect,
         executor: (ctx: PhaseExecutorContext) => {
-          (ctx.node as RaphEffect).run()
+          ;(ctx.node as RaphEffect).run()
         },
       },
       //
@@ -81,7 +81,7 @@ export class Raph {
         routes: ['*'],
         nodes: (node: RaphNode) => node instanceof RaphWatch,
         executor: (ctx: PhaseExecutorContext) => {
-          (ctx.node as RaphWatch).run(ctx)
+          ;(ctx.node as RaphWatch).run(ctx)
         },
       },
       //
@@ -94,8 +94,6 @@ export class Raph {
   static signal<T>(input: T | (() => T)): RaphSignal<T> {
     const id = `__signals.${this.__signalId++}`
 
-    // если у тебя DataPath.fromString — оставь этот вызов;
-    // если обычно используешь DataPath.from, замени на него.
     const path = DataPath.fromString(id)
 
     const compute = typeof input === 'function' ? (input as () => T) : undefined
