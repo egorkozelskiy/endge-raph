@@ -36,7 +36,7 @@ describe('RaphApp.run — порядок выполнения', () => {
         name: 'phase-A' as PhaseName,
         traversal: 'dirty-only',
         routes: ['a.*'],
-        executor: (ctx: PhaseExecutorContext) => {
+        each: (ctx: PhaseExecutorContext) => {
           calls.push(`A:${ctx.node.id}`)
         },
       },
@@ -44,7 +44,7 @@ describe('RaphApp.run — порядок выполнения', () => {
         name: 'phase-B' as PhaseName,
         traversal: 'dirty-only',
         routes: ['a.*'],
-        executor: (ctx: PhaseExecutorContext) => {
+        each: (ctx: PhaseExecutorContext) => {
           calls.push(`B:${ctx.node.id}`)
         },
       },
@@ -79,7 +79,7 @@ describe('RaphApp.run — порядок выполнения', () => {
         name: 'phase' as PhaseName,
         traversal: 'dirty-only',
         routes: ['k.*'],
-        executor: ({ node }) => order.push(node.id),
+        each: ({ node }) => order.push(node.id),
       },
     ])
 
@@ -117,7 +117,7 @@ describe('RaphApp.run — порядок выполнения', () => {
         name: 'phase' as PhaseName,
         traversal: 'dirty-and-down',
         routes: ['data.*'],
-        executor: ({ node }) => seen.push(node.id),
+        each: ({ node }) => seen.push(node.id),
       },
     ])
 
@@ -147,7 +147,7 @@ describe('RaphApp.run — порядок выполнения', () => {
         name: 'phase' as PhaseName,
         traversal: 'dirty-and-up',
         routes: ['q.*'],
-        executor: ({ node }) => seq.push(node.id),
+        each: ({ node }) => seq.push(node.id),
       },
     ])
 
@@ -180,7 +180,7 @@ describe('RaphApp.run — порядок выполнения', () => {
         name: 'phase-all' as PhaseName,
         traversal: 'all',
         routes: ['trigger.*'],
-        executor: ({ node }) => seq.push(node.id),
+        each: ({ node }) => seq.push(node.id),
       },
     ])
 
@@ -188,7 +188,7 @@ describe('RaphApp.run — порядок выполнения', () => {
     raph.set('trigger.go', 1)
 
     // Ожидаем pre-order от корня: root (анонимный id у корня?), затем a, c, d, b
-    // Корневой узел обычно имеет скрытый id; если его executor не вызывается — начнется с a
+    // Корневой узел обычно имеет скрытый id; если его each не вызывается — начнется с a
     // В наших RaphNode обычно у root есть id автоматически? Предположим нет — тогда:
     // Проверим, что присутствуют все добавленные ноды в порядке обхода: a -> c -> d -> b
     expect(seq).toEqual(['a', 'b', 'c', 'd'])
@@ -214,7 +214,7 @@ describe('RaphApp.run — порядок выполнения', () => {
         name: 'phase' as PhaseName,
         traversal: 'dirty-only',
         routes: ['x.*'],
-        executor: ({ node }) => order.push(node.id),
+        each: ({ node }) => order.push(node.id),
       },
     ])
 
@@ -252,13 +252,13 @@ describe('RaphApp.run — порядок выполнения', () => {
         name: 'A' as PhaseName,
         traversal: 'dirty-and-down',
         routes: ['m.*'],
-        executor: ({ node }) => calls.push(`A:${node.id}`),
+        each: ({ node }) => calls.push(`A:${node.id}`),
       },
       {
         name: 'B' as PhaseName,
         traversal: 'dirty-only',
         routes: ['m.*'],
-        executor: ({ node }) => calls.push(`B:${node.id}`),
+        each: ({ node }) => calls.push(`B:${node.id}`),
       },
     ])
 

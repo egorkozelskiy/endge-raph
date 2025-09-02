@@ -32,7 +32,7 @@ describe('bench.notify x1_000', () => {
         name: 'bench-phase' as PhaseName,
         traversal: 'dirty-only',
         routes: ['data.*'], // реагируем на любые изменения под data.*
-        executor: (_ctx: PhaseExecutorContext) => {
+        each: (_ctx: PhaseExecutorContext) => {
           execCount++
         },
       },
@@ -96,7 +96,7 @@ describe('bench.notify x1_000', () => {
         name: 'fanout-phase' as PhaseName,
         traversal: 'dirty-and-down',
         routes: ['data.*'],
-        executor: (ctx: PhaseExecutorContext) => {
+        each: (ctx: PhaseExecutorContext) => {
           seen.add(ctx.node.id)
         },
       },

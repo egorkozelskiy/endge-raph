@@ -15,7 +15,7 @@ describe('Dep Graph', () => {
         name: 'P' as PhaseName,
         traversal: 'dirty-only',
         routes: ['*'],
-        executor: ({ node }) => calls.push(node.id),
+        each: ({ node }) => calls.push(node.id),
       },
     ])
 

@@ -51,7 +51,7 @@ describe('RaphApp.traversal', () => {
         name: 'phase-dirty-only' as PhaseName,
         traversal: 'dirty-only',
         routes: ['com.*'],
-        executor: (ctx: PhaseExecutorContext) => {
+        each: (ctx: PhaseExecutorContext) => {
           calls.push(ctx.node.id)
         },
       },
@@ -80,7 +80,7 @@ describe('RaphApp.traversal', () => {
         name: 'phase-down' as PhaseName,
         traversal: 'dirty-and-down',
         routes: ['com.*'],
-        executor: (ctx: PhaseExecutorContext) => {
+        each: (ctx: PhaseExecutorContext) => {
           calls.push(ctx.node.id)
         },
       },
@@ -110,7 +110,7 @@ describe('RaphApp.traversal', () => {
         name: 'phase-down' as PhaseName,
         traversal: 'dirty-and-down',
         routes: ['com.*'],
-        executor: (ctx: PhaseExecutorContext) => {
+        each: (ctx: PhaseExecutorContext) => {
           calls.push(ctx.node.id)
         },
       },
@@ -138,7 +138,7 @@ describe('RaphApp.traversal', () => {
         name: 'phase-up' as PhaseName,
         traversal: 'dirty-and-up',
         routes: ['com.*'],
-        executor: (ctx: PhaseExecutorContext) => {
+        each: (ctx: PhaseExecutorContext) => {
           calls.push(ctx.node.id)
         },
       },
@@ -168,7 +168,7 @@ describe('RaphApp.traversal', () => {
         name: 'phase-all' as PhaseName,
         traversal: 'all',
         routes: ['com.*'],
-        executor: (ctx: PhaseExecutorContext) => {
+        each: (ctx: PhaseExecutorContext) => {
           calls.push(ctx.node.id)
         },
       },
@@ -202,7 +202,7 @@ describe('RaphApp.traversal', () => {
         name: 'phase-down' as PhaseName,
         traversal: 'dirty-and-down',
         routes: ['com.*'],
-        executor: (ctx: PhaseExecutorContext) => {
+        each: (ctx: PhaseExecutorContext) => {
           downCalls.push(ctx.node.id)
         },
       },
@@ -210,7 +210,7 @@ describe('RaphApp.traversal', () => {
         name: 'phase-up' as PhaseName,
         traversal: 'dirty-and-up',
         routes: ['com.*'],
-        executor: (ctx: PhaseExecutorContext) => {
+        each: (ctx: PhaseExecutorContext) => {
           upCalls.push(ctx.node.id)
         },
       },

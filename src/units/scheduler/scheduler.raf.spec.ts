@@ -53,7 +53,7 @@ describe('RaphApp.scheduler-raf', () => {
       {
         name: 'raf-phase' as PhaseName,
         traversal: 'dirty-only',
-        executor: (ctx: PhaseExecutorContext) => {
+        each: (ctx: PhaseExecutorContext) => {
           calls.push({ phase: ctx.phase as string, node: ctx.node.id })
         },
         routes: ['scene.*'],
@@ -73,7 +73,7 @@ describe('RaphApp.scheduler-raf', () => {
     vi.advanceTimersByTime(15)
     expect(calls.length).toBe(0)
 
-    // Продвигаем до кадра -> executor должен выполниться
+    // Продвигаем до кадра -> each должен выполниться
     vi.advanceTimersByTime(1)
     expect(calls.length).toBe(1)
     expect(calls[0]).toEqual({ phase: 'raf-phase', node: 'n1' })
@@ -89,7 +89,7 @@ describe('RaphApp.scheduler-raf', () => {
       {
         name: 'raf-phase' as PhaseName,
         traversal: 'dirty-only',
-        executor: exec,
+        each: exec,
         routes: ['items.*'],
       },
     ])
@@ -124,7 +124,7 @@ describe('RaphApp.scheduler-raf', () => {
       {
         name: 'raf-phase' as PhaseName,
         traversal: 'dirty-only',
-        executor: exec,
+        each: exec,
         routes: ['app.*'],
       },
     ])
@@ -168,7 +168,7 @@ describe('RaphApp.scheduler-raf', () => {
       {
         name: 'raf-phase' as PhaseName,
         traversal: 'dirty-and-down',
-        executor: exec,
+        each: exec,
         routes: ['root.*'],
       },
     ])

@@ -9,7 +9,7 @@ import type {
 import { RaphNode } from '@/domain/core/RaphNode'
 
 describe('RaphApp.scheduler (microtask)', () => {
-  it('запускает выполнение в микротаске (не синхронно), затем выполняет executor фазы', async () => {
+  it('запускает выполнение в микротаске (не синхронно), затем выполняет each фазы', async () => {
     const raph = new RaphApp()
     raph.options({ scheduler: SchedulerType.Microtask })
 
@@ -19,7 +19,7 @@ describe('RaphApp.scheduler (microtask)', () => {
       name: 'phase-1' as PhaseName,
       traversal: 'dirty-only',
       routes: ['foo.*'],
-      executor: (ctx: PhaseExecutorContext) => {
+      each: (ctx: PhaseExecutorContext) => {
         calls.push({ phase: ctx.phase as unknown as string, node: ctx.node.id })
       },
     }
@@ -55,7 +55,7 @@ describe('RaphApp.scheduler (microtask)', () => {
         name: 'phase-micro' as PhaseName,
         traversal: 'dirty-only',
         routes: ['bar.*'],
-        executor: exec,
+        each: exec,
       },
     ])
 
@@ -77,7 +77,7 @@ describe('RaphApp.scheduler (microtask)', () => {
 
     // ожидается ровно один вызов run
     expect(runSpy).toHaveBeenCalledTimes(1)
-    // executor был вызван хотя бы один раз (точное количество зависит от traversal/dirty merge)
+    // each был вызван хотя бы один раз (точное количество зависит от traversal/dirty merge)
     expect(exec).toHaveBeenCalled()
   })
 
@@ -92,7 +92,7 @@ describe('RaphApp.scheduler (microtask)', () => {
         name: 'p' as PhaseName,
         traversal: 'dirty-only',
         routes: ['z.*'],
-        executor: microExec,
+        each: microExec,
       },
     ])
     const n1 = new RaphNode(raphMicro, { id: 'n1' })
@@ -114,7 +114,7 @@ describe('RaphApp.scheduler (microtask)', () => {
         name: 'p' as PhaseName,
         traversal: 'dirty-only',
         routes: ['z.*'],
-        executor: syncExec,
+        each: syncExec,
       },
     ])
     const n2 = new RaphNode(raphSync, { id: 'n2' })

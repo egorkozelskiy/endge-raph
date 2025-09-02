@@ -32,7 +32,7 @@ describe('RaphApp.dirty-buckets (Map + MinHeap)', () => {
       {
         name: PHASE,
         traversal: 'dirty-only',
-        executor: (_ctx: PhaseExecutorContext) => {},
+        each: (_ctx: PhaseExecutorContext) => {},
         routes: ['*'],
       },
     ])
@@ -73,7 +73,7 @@ describe('RaphApp.dirty-buckets (Map + MinHeap)', () => {
       {
         name: PHASE,
         traversal: 'dirty-only',
-        executor: (_ctx: PhaseExecutorContext) => {},
+        each: (_ctx: PhaseExecutorContext) => {},
         routes: ['*'],
       },
     ])
@@ -100,7 +100,7 @@ describe('RaphApp.dirty-buckets (Map + MinHeap)', () => {
       {
         name: PHASE,
         traversal: 'dirty-only',
-        executor: (_ctx: PhaseExecutorContext) => {},
+        each: (_ctx: PhaseExecutorContext) => {},
         routes: ['*'],
       },
     ])
@@ -135,7 +135,7 @@ describe('RaphApp.dirty-buckets (Map + MinHeap)', () => {
       {
         name: 'defined' as PhaseName,
         traversal: 'dirty-only',
-        executor: exec,
+        each: exec,
         routes: ['*'],
       },
     ])
@@ -155,7 +155,7 @@ describe('RaphApp.dirty-buckets (Map + MinHeap)', () => {
       {
         name: PHASE,
         traversal: 'dirty-only',
-        executor: exec,
+        each: exec,
         routes: ['com.*'],
       },
     ])
@@ -189,7 +189,7 @@ describe('RaphApp.dirty-buckets (Map + MinHeap)', () => {
       {
         name: PHASE,
         traversal: 'dirty-only',
-        executor: ({ node }: PhaseExecutorContext) => order.push(node.id),
+        each: ({ node }: PhaseExecutorContext) => order.push(node.id),
         routes: ['*'],
       },
     ])
@@ -229,7 +229,7 @@ describe('RaphApp.dirty-buckets (Map + MinHeap)', () => {
       {
         name: PHASE,
         traversal: 'dirty-only',
-        executor: (_ctx: PhaseExecutorContext) => {},
+        each: (_ctx: PhaseExecutorContext) => {},
         routes: ['*'],
       },
     ])
@@ -262,7 +262,7 @@ describe('RaphApp.dirty-buckets (Map + MinHeap)', () => {
       {
         name: PHASE,
         traversal: 'dirty-and-down',
-        executor: exec,
+        each: exec,
         routes: ['com.*'],
       },
     ])

@@ -22,7 +22,7 @@ describe('RaphApp.scheduler-sync', () => {
         name: 'sync-phase' as PhaseName,
         traversal: 'dirty-only',
         routes: ['com.*'],
-        executor: (ctx: PhaseExecutorContext) => {
+        each: (ctx: PhaseExecutorContext) => {
           calls.push({ phase: String(ctx.phase), nodeId: ctx.node.id })
         },
       },
@@ -32,7 +32,7 @@ describe('RaphApp.scheduler-sync', () => {
     raph.addNode(n)
     raph.track(n, 'com.x')
 
-    // set должен синхронно вызвать notify -> dirty -> run -> executor
+    // set должен синхронно вызвать notify -> dirty -> run -> each
     raph.set('com.x', 1)
 
     expect(calls.length).toBe(1)
@@ -49,7 +49,7 @@ describe('RaphApp.scheduler-sync', () => {
         name: 'sync-phase' as PhaseName,
         traversal: 'dirty-only',
         routes: ['com.*'],
-        executor: exec,
+        each: exec,
       },
     ])
 
@@ -72,7 +72,7 @@ describe('RaphApp.scheduler-sync', () => {
         name: 'sync-phase' as PhaseName,
         traversal: 'dirty-only',
         routes: ['com.*'],
-        executor: exec,
+        each: exec,
       },
     ])
 
@@ -96,7 +96,7 @@ describe('RaphApp.scheduler-sync', () => {
         name: 'sync-phase' as PhaseName,
         traversal: 'dirty-and-down',
         routes: ['com.*'],
-        executor: (ctx) => {
+        each: (ctx) => {
           seen.push(ctx.node.id)
         },
       },

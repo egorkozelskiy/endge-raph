@@ -74,7 +74,7 @@ describe('bench.run() большая графовая структура и мн
       name: name as PhaseName,
       traversal,
       routes,
-      executor: (_ctx: PhaseExecutorContext) => {
+      each: (_ctx: PhaseExecutorContext) => {
         execCounters[name] = (execCounters[name] ?? 0) + 1
       },
     })

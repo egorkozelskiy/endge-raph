@@ -20,13 +20,13 @@ describe('RaphApp notify CRUD', () => {
       {
         name: 'test-phase' as PhaseName,
         traversal: 'dirty-only',
-        executor: executorSpy,
+        each: executorSpy,
         routes: ['com.*', 'data.*'],
       },
     ])
   })
 
-  it('set должен вызывать notify и executor', () => {
+  it('set должен вызывать notify и each', () => {
     const node = new RaphNode(raph, { id: 'n1' })
     raph.addNode(node)
     raph.track(node, 'com.*')
@@ -37,7 +37,7 @@ describe('RaphApp notify CRUD', () => {
     expect(executorSpy).toHaveBeenCalled()
   })
 
-  it('merge должен вызывать notify и executor', () => {
+  it('merge должен вызывать notify и each', () => {
     const node = new RaphNode(raph, { id: 'n1' })
     raph.addNode(node)
     raph.track(node, 'data.*')
@@ -49,7 +49,7 @@ describe('RaphApp notify CRUD', () => {
     expect(executorSpy).toHaveBeenCalled()
   })
 
-  it('delete должен вызывать notify и executor', () => {
+  it('delete должен вызывать notify и each', () => {
     const node = new RaphNode(raph, { id: 'n1' })
     raph.addNode(node)
     raph.track(node, 'com.*')
@@ -61,7 +61,7 @@ describe('RaphApp notify CRUD', () => {
     expect(executorSpy).toHaveBeenCalled()
   })
 
-  it('не должен вызывать executor, если нет совпадения по route', () => {
+  it('не должен вызывать each, если нет совпадения по route', () => {
     const node = new RaphNode(raph, { id: 'n1' })
     raph.addNode(node)
     raph.track(node, 'other.*')

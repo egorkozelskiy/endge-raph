@@ -46,7 +46,7 @@ describe('RaphApp.notify routing', () => {
       {
         name: 'phase' as PhaseName,
         traversal: 'dirty-only',
-        executor: exec,
+        each: exec,
         routes: ['com.*', 'data.x'],
       },
     ])
@@ -75,7 +75,7 @@ describe('RaphApp.notify routing', () => {
       {
         name: 'phase' as PhaseName,
         traversal: 'dirty-only',
-        executor: exec,
+        each: exec,
         routes: ['data.*'], // только data
       },
     ])
@@ -97,7 +97,7 @@ describe('RaphApp.notify routing', () => {
       {
         name: 'phase' as PhaseName,
         traversal: 'dirty-only',
-        executor: exec,
+        each: exec,
         routes: ['com.*'],
       },
     ])
@@ -118,7 +118,7 @@ describe('RaphApp.notify routing', () => {
       {
         name: 'phase' as PhaseName,
         traversal: 'dirty-only',
-        executor: exec,
+        each: exec,
         routes: ['com[*].x'],
       },
     ])
@@ -140,13 +140,13 @@ describe('RaphApp.notify routing', () => {
       {
         name: 'phase-1' as PhaseName,
         traversal: 'dirty-only',
-        executor: exec1,
+        each: exec1,
         routes: ['com.*'],
       },
       {
         name: 'phase-2' as PhaseName,
         traversal: 'dirty-only',
-        executor: exec2,
+        each: exec2,
         routes: ['data.*'],
       },
     ])
@@ -169,7 +169,7 @@ describe('RaphApp.notify routing', () => {
       {
         name: 'phase' as PhaseName,
         traversal: 'dirty-only',
-        executor: (ctx) => {
+        each: (ctx) => {
           seen.push(ctx.node.id)
         },
         routes: ['data.*'],
@@ -193,7 +193,7 @@ describe('RaphApp.notify routing', () => {
       {
         name: 'phase' as PhaseName,
         traversal: 'dirty-and-down',
-        executor: (ctx) => {
+        each: (ctx) => {
           seen.push(ctx.node.id)
         },
         routes: ['data.*'],
@@ -219,7 +219,7 @@ describe('RaphApp.notify routing', () => {
       {
         name: 'phase' as PhaseName,
         traversal: 'dirty-and-up',
-        executor: (ctx) => {
+        each: (ctx) => {
           seen.push(ctx.node.id)
         },
         routes: ['data.*'],
@@ -243,7 +243,7 @@ describe('RaphApp.notify routing', () => {
       {
         name: 'phase' as PhaseName,
         traversal: 'all',
-        executor: (ctx) => {
+        each: (ctx) => {
           // root у RaphNode имеет id вида "root-..." (или определён вашей реализацией)
           seen.add(ctx.node.id)
         },
@@ -270,7 +270,7 @@ describe('RaphApp.notify routing', () => {
       {
         name: 'phase' as PhaseName,
         traversal: 'dirty-only',
-        executor: exec,
+        each: exec,
         routes: ['scene.layers.*', 'scene.*'], // оба должны покрыть уведомления ниже
       },
     ])
@@ -294,7 +294,7 @@ describe('RaphApp.notify routing', () => {
       {
         name: 'phase' as PhaseName,
         traversal: 'dirty-only',
-        executor: exec,
+        each: exec,
         routes: ['com.x'],
       },
     ])
@@ -318,7 +318,7 @@ describe('RaphApp.notify routing', () => {
       {
         name: 'phase' as PhaseName,
         traversal: 'dirty-only',
-        executor: exec,
+        each: exec,
         routes: ['com[*].x'], // любой id, но ключ и глубина фиксированы
       },
     ])

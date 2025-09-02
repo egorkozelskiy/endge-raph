@@ -56,7 +56,7 @@ export class Raph {
         traversal: 'dirty-and-down',
         routes: ['__signals.*'],
         nodes: (node: RaphNode) => node instanceof RaphSignal,
-        executor: (ctx: PhaseExecutorContext) => {
+        each: (ctx: PhaseExecutorContext) => {
           ;(ctx.node as RaphSignal<any>).update()
         },
       },
@@ -68,7 +68,7 @@ export class Raph {
         traversal: 'dirty-only',
         routes: ['__signals.*'],
         nodes: (node: RaphNode) => node instanceof RaphEffect,
-        executor: (ctx: PhaseExecutorContext) => {
+        each: (ctx: PhaseExecutorContext) => {
           ;(ctx.node as RaphEffect).run()
         },
       },
@@ -80,7 +80,7 @@ export class Raph {
         traversal: 'dirty-only',
         routes: ['*'],
         nodes: (node: RaphNode) => node instanceof RaphWatch,
-        executor: (ctx: PhaseExecutorContext) => {
+        each: (ctx: PhaseExecutorContext) => {
           ;(ctx.node as RaphWatch).run(ctx)
         },
       },

@@ -319,24 +319,55 @@ export class RaphApp {
       const q = this._dirty.get(phase.name)!
       if (!q || q.inHeap.size === 0) continue
 
-      while (!q.heap.empty) {
-        const bucketIdx = q.heap.pop()!
-        q.inHeap.delete(bucketIdx)
+      const bit = this._phaseBits.get(phase.name) ?? 0
 
-        const arr = q.buckets.get(bucketIdx)
-        if (!arr || arr.length === 0) continue
+      if ('all' in phase && typeof phase.all === 'function') {
+        // Собираем все dirty-ноды по всем bucket
+        const ctxs: Array<{
+          phase: PhaseName
+          node: RaphNode
+          events?: PhaseEvent[]
+        }> = []
 
-        for (let i = 0; i < arr.length; i++) {
-          const node = arr[i]
-          const events = q.events?.get(node.id) ?? undefined
-          const bit = this._phaseBits.get(phase.name) ?? 0
-          if (bit) (node as any)['__dirtyPhasesMask'] &= ~bit
-          phase.executor({ phase: phase.name, node, events })
+        for (const bucketIdx of q.inHeap) {
+          const arr = q.buckets.get(bucketIdx)
+          if (!arr || arr.length === 0) continue
+
+          for (let i = 0; i < arr.length; i++) {
+            const node = arr[i]
+            if (bit) (node as any)['__dirtyPhasesMask'] &= ~bit
+            const events = q.events?.get(node.id) ?? undefined
+            ctxs.push({ phase: phase.name, node, events })
+          }
+
+          q.buckets.delete(bucketIdx)
         }
 
-        // Было: arr.length = 0 (оставляли пустой массив в Map).
-        // Станет: удаляем ключ, чтобы Map не росла бесконечно.
-        q.buckets.delete(bucketIdx)
+        q.events.clear()
+        q.inHeap.clear()
+        q.heap.clear()
+
+        // Единый вызов all()
+        phase.all(ctxs)
+      } else if ('each' in phase && typeof phase.each === 'function') {
+        // По бакетам
+        while (!q.heap.empty) {
+          const bucketIdx = q.heap.pop()!
+          q.inHeap.delete(bucketIdx)
+
+          const arr = q.buckets.get(bucketIdx)
+          if (!arr || arr.length === 0) continue
+
+          for (let i = 0; i < arr.length; i++) {
+            const node = arr[i]
+            if (bit) (node as any)['__dirtyPhasesMask'] &= ~bit
+            const events = q.events?.get(node.id) ?? undefined
+            phase.each({ phase: phase.name, node, events })
+          }
+
+          q.buckets.delete(bucketIdx)
+        }
+
         q.events.clear()
       }
     }

@@ -13,7 +13,7 @@ describe('RaphApp track/untrack (router-based)', () => {
         name: 'T' as PhaseName,
         routes: [route], // фаза интересуется этим маршрутом
         traversal: 'dirty-only', // берём ровно те ноды, которые дал роутер
-        executor: ({ node }) => {
+        each: ({ node }) => {
           fired.push(node)
         },
       },
@@ -78,8 +78,8 @@ describe('RaphApp track/untrack (router-based)', () => {
         name: 'T' as PhaseName,
         routes: ['com.x', 'data.y'],
         traversal: 'dirty-only',
-        executor: ({ node }) => {
-          // executor не знает путь, но мы будем дергать notify/set по одному за раз
+        each: ({ node }) => {
+          // each не знает путь, но мы будем дергать notify/set по одному за раз
           fired.push({ path: '<fired>', node })
         },
       },

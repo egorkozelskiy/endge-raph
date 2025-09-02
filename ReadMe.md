@@ -44,7 +44,7 @@ app.definePhases([
     {
         name: 'watch',
         traversal: 'dirty-only',
-        executor: (ctx) => {
+        each: (ctx) => {
             console.log('Triggered:', ctx.node.id, ctx.event)
         },
         routes: ['data.*'],
@@ -103,7 +103,7 @@ const hits = r.matchWithParams('orders[id=10].items[id=5].price')
 **Фаза** — это стратегия выполнения нод. Определяет:
 
 - Как выбираются ноды (routes)
-- Как они исполняются (executor)
+- Как они исполняются (each)
 - Как проходит обход (traversal)
 
 Варианты traversal:
@@ -119,7 +119,7 @@ app.definePhases([
     {
         name: 'render',
         traversal: 'dirty-and-down',
-        executor: (ctx) => {
+        each: (ctx) => {
             console.log('Render node', ctx.node.id)
         },
         routes: ['ui.*'],

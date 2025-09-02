@@ -16,12 +16,12 @@ describe('RaphApp notify – miss routes', () => {
     execB.mockClear()
   })
 
-  it('не запускает executor, если ни один route не совпал', () => {
+  it('не запускает each, если ни один route не совпал', () => {
     raph.definePhases([
       {
         name: 'phaseA' as PhaseName,
         traversal: 'dirty-only',
-        executor: execA,
+        each: execA,
         routes: ['foo.*'], // не совпадёт с com.*
       },
     ])
@@ -35,12 +35,12 @@ describe('RaphApp notify – miss routes', () => {
     expect(execA).not.toHaveBeenCalled()
   })
 
-  it('не запускает executor, если phase.routes пустые', () => {
+  it('не запускает each, если phase.routes пустые', () => {
     raph.definePhases([
       {
         name: 'phaseA' as PhaseName,
         traversal: 'dirty-only',
-        executor: execA,
+        each: execA,
         routes: [], // явно ничего не матчится
       },
     ])
@@ -54,18 +54,18 @@ describe('RaphApp notify – miss routes', () => {
     expect(execA).not.toHaveBeenCalled()
   })
 
-  it('не запускает executor, если есть фаза с совпадением и фаза без совпадения — срабатывает только совпавшая', () => {
+  it('не запускает each, если есть фаза с совпадением и фаза без совпадения — срабатывает только совпавшая', () => {
     raph.definePhases([
       {
         name: 'phaseA' as PhaseName,
         traversal: 'dirty-only',
-        executor: execA,
+        each: execA,
         routes: ['foo.*'], // miss
       },
       {
         name: 'phaseB' as PhaseName,
         traversal: 'dirty-only',
-        executor: execB,
+        each: execB,
         routes: ['com.*'], // hit
       },
     ])
@@ -85,7 +85,7 @@ describe('RaphApp notify – miss routes', () => {
       {
         name: 'phaseA' as PhaseName,
         traversal: 'dirty-only',
-        executor: execA,
+        each: execA,
         routes: ['com.*'], // по нашей реализации: * в середине — один сегмент
       },
     ])
@@ -104,7 +104,7 @@ describe('RaphApp notify – miss routes', () => {
       {
         name: 'phaseA' as PhaseName,
         traversal: 'dirty-only',
-        executor: execA,
+        each: execA,
         routes: ['list[*]'], // допустим, фазе нужен любой элемент, но нода подписана на конкретный id
       },
     ])
@@ -117,8 +117,8 @@ describe('RaphApp notify – miss routes', () => {
     raph.set('list[id="7"].name', 'X')
 
     // Фаза слушает list[*] (любой элемент), но нода зависит от id=5.
-    // executor должен вызываться только при попадании в phase.routes,
-    // здесь роуты фазы попадут, но dirty узлов по depIndex не набралось -> executor не зовётся.
+    // each должен вызываться только при попадании в phase.routes,
+    // здесь роуты фазы попадут, но dirty узлов по depIndex не набралось -> each не зовётся.
     expect(execA).not.toHaveBeenCalled()
   })
 
@@ -127,13 +127,13 @@ describe('RaphApp notify – miss routes', () => {
       {
         name: 'phaseA' as PhaseName,
         traversal: 'dirty-only',
-        executor: execA,
+        each: execA,
         routes: ['alpha.*'],
       },
       {
         name: 'phaseB' as PhaseName,
         traversal: 'dirty-only',
-        executor: execB,
+        each: execB,
         routes: ['beta.*'],
       },
     ])

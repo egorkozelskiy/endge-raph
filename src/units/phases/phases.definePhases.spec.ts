@@ -17,13 +17,13 @@ describe('RaphApp.definePhases', () => {
       {
         name: 'phase-A' as PhaseName,
         traversal: 'dirty-only',
-        executor: execA,
+        each: execA,
         routes: ['x.*'],
       },
       {
         name: 'phase-B' as PhaseName,
         traversal: 'all',
-        executor: execB,
+        each: execB,
         routes: ['y.*'],
       },
     ]
@@ -33,8 +33,8 @@ describe('RaphApp.definePhases', () => {
     // порядок сохраняется в .phases
     expect(raph.phases.map((p) => p.name)).toEqual(['phase-A', 'phase-B'])
     // executors — те же самые ссылки
-    expect(raph.phases[0].executor).toBe(execA)
-    expect(raph.phases[1].executor).toBe(execB)
+    expect(raph.phases[0].each).toBe(execA)
+    expect(raph.phases[1].each).toBe(execB)
   })
 
   it('заполняет карту фаз для быстрого поиска по имени', () => {
@@ -47,13 +47,13 @@ describe('RaphApp.definePhases', () => {
       {
         name: 'alpha' as PhaseName,
         traversal: 'dirty-only',
-        executor: execA,
+        each: execA,
         routes: ['a.*'],
       },
       {
         name: 'beta' as PhaseName,
         traversal: 'dirty-only',
-        executor: execB,
+        each: execB,
         routes: ['b.*'],
       },
     ])
@@ -63,8 +63,8 @@ describe('RaphApp.definePhases', () => {
 
     expect(alpha).toBeDefined()
     expect(beta).toBeDefined()
-    expect(alpha!.executor).toBe(execA)
-    expect(beta!.executor).toBe(execB)
+    expect(alpha!.each).toBe(execA)
+    expect(beta!.each).toBe(execB)
   })
 
   it('заменяет ранее определённые фазы при повторном вызове', () => {
@@ -74,13 +74,13 @@ describe('RaphApp.definePhases', () => {
       {
         name: 'old-1' as PhaseName,
         traversal: 'dirty-only',
-        executor: vi.fn(),
+        each: vi.fn(),
         routes: ['x.*'],
       },
       {
         name: 'old-2' as PhaseName,
         traversal: 'dirty-only',
-        executor: vi.fn(),
+        each: vi.fn(),
         routes: ['y.*'],
       },
     ])
@@ -91,13 +91,13 @@ describe('RaphApp.definePhases', () => {
       {
         name: 'new-2' as PhaseName,
         traversal: 'dirty-and-down',
-        executor: execN,
+        each: execN,
         routes: ['z.*'],
       },
       {
         name: 'new-1' as PhaseName,
         traversal: 'all',
-        executor: vi.fn(),
+        each: vi.fn(),
         routes: ['w.*'],
       },
     ])
@@ -109,7 +109,7 @@ describe('RaphApp.definePhases', () => {
     // новые фазы существуют в новом порядке
     expect(raph.phases.map((p) => p.name)).toEqual(['new-2', 'new-1'])
     expect(raph.getPhase('new-2' as PhaseName)).toBeDefined()
-    expect(raph.getPhase('new-2' as PhaseName)!.executor).toBe(execN)
+    expect(raph.getPhase('new-2' as PhaseName)!.each).toBe(execN)
   })
 
   it('принимает фазы с пустым массивом routes', () => {
@@ -119,7 +119,7 @@ describe('RaphApp.definePhases', () => {
       {
         name: 'no-routes' as PhaseName,
         traversal: 'dirty-only',
-        executor: vi.fn(),
+        each: vi.fn(),
         routes: [],
       },
     ])
@@ -139,25 +139,25 @@ describe('RaphApp.definePhases', () => {
       {
         name: 'dup' as PhaseName,
         traversal: 'dirty-only',
-        executor: exec1,
+        each: exec1,
         routes: ['a.*'],
       },
       {
         name: 'dup' as PhaseName,
         traversal: 'all',
-        executor: exec2,
+        each: exec2,
         routes: ['b.*'],
       },
     ])
 
     // массив хранит обе; карта должна содержать последнюю по имени
     expect(raph.phases.length).toBe(2)
-    expect(raph.phases[0].executor).toBe(exec1)
-    expect(raph.phases[1].executor).toBe(exec2)
+    expect(raph.phases[0].each).toBe(exec1)
+    expect(raph.phases[1].each).toBe(exec2)
 
     const fromMap = raph.getPhase('dup' as PhaseName)
     expect(fromMap).toBeDefined()
-    expect(fromMap!.executor).toBe(exec2)
+    expect(fromMap!.each).toBe(exec2)
     expect(fromMap!.traversal).toBe('all')
   })
 })

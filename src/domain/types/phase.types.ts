@@ -27,7 +27,7 @@ export type PhaseEvent = {
 }
 
 /**
- * Контекст выполнения фазы
+ * Контекст выполнения фазы (для каждой ноды или для всех сразу)
  */
 export type PhaseExecutorContext = {
   phase: PhaseName
@@ -38,7 +38,13 @@ export type PhaseExecutorContext = {
 /**
  * Тип для функции, которая выполняет фазу
  */
-export type PhaseExecutor = (ctx: PhaseExecutorContext) => void | Promise<void>
+export type PhaseEachExecutor = (
+  ctx: PhaseExecutorContext,
+) => void | Promise<void>
+
+export type PhaseAllExecutor = (
+  ctxs: PhaseExecutorContext[],
+) => void | Promise<void>
 
 /**
  * Описание фазы RaphApp
@@ -46,7 +52,9 @@ export type PhaseExecutor = (ctx: PhaseExecutorContext) => void | Promise<void>
 export type RaphPhase = {
   name: PhaseName
   traversal: Traversal
-  executor: PhaseExecutor
   routes: string[]
-  nodes?: (node: RaphNode) => boolean | RaphNodeType[]
-}
+} & ({ each: PhaseEachExecutor } | { all: PhaseAllExecutor }) &
+  (
+    | { nodes?: (node: RaphNode) => boolean }
+    | { nodes?: (node: RaphNode) => RaphNodeType[] }
+  )

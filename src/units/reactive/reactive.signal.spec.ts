@@ -10,7 +10,7 @@ import { RaphApp } from '@/domain/core/RaphApp'
 import { DataPath } from '@/domain/entities/DataPath'
 
 /**
- *  вспомогательный executor для "compute"-фазы
+ *  вспомогательный each для "compute"-фазы
  *  */
 function computeExecutor({ node }: PhaseExecutorContext): void {
   // обновляем только computed-сигналы
@@ -31,7 +31,7 @@ describe('RaphSignal (DAG)', () => {
         name: PHASE,
         traversal: 'dirty-only',
         routes: ['__signals.*'],
-        executor: (ctx) => {
+        each: (ctx) => {
           execCalls.push(ctx.node.id)
         },
       },
@@ -43,7 +43,7 @@ describe('RaphSignal (DAG)', () => {
     a.value = 1
     expect(a.value).toBe(1)
 
-    // изменение — должно вызвать notify (фаза сматчится), но executor ничего «особенного» не делает
+    // изменение — должно вызвать notify (фаза сматчится), но each ничего «особенного» не делает
     a.value = 2
     expect(a.value).toBe(2)
     expect(execCalls.length).toBeGreaterThan(0) // фаза хотя бы раз сработала
@@ -60,7 +60,7 @@ describe('RaphSignal (DAG)', () => {
         name: PHASE,
         traversal: 'dirty-and-down',
         routes: ['__signals.*'],
-        executor: computeExecutor,
+        each: computeExecutor,
       },
     ])
 
@@ -87,7 +87,7 @@ describe('RaphSignal (DAG)', () => {
     // конструктор computed уже сделал первый update() без notify
     expect(c.value).toBe(15)
 
-    // меняем источник -> notify попадёт в a, traversal «вниз» доберётся до c, executor вызовет c.update()
+    // меняем источник -> notify попадёт в a, traversal «вниз» доберётся до c, each вызовет c.update()
     a.value = 20
     app.run()
     expect(c.value).toBe(25)
@@ -107,7 +107,7 @@ describe('RaphSignal (DAG)', () => {
         name: PHASE,
         traversal: 'dirty-and-down',
         routes: ['__signals.*'],
-        executor: computeExecutor,
+        each: computeExecutor,
       },
     ])
 
@@ -170,7 +170,7 @@ describe('RaphSignal (DAG)', () => {
         name: 'compute' as PhaseName,
         traversal: 'dirty-and-down',
         routes: ['__signals.*'],
-        executor: computeExecutor,
+        each: computeExecutor,
       },
     ])
 
