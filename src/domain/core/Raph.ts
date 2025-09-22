@@ -46,6 +46,22 @@ export class Raph {
     this.app.options(opts)
   }
 
+  static addPhase(phase: RaphPhase): void {
+    this.app.addPhase(phase)
+  }
+
+  static clearPhases(): void {
+    this.app.clearPhases()
+  }
+
+  /**
+   * Инициализация фаз.
+   * Подразумевается, что фазы уже добавлены в this._phasesArray
+   */
+  static reinitPhases(): void {
+    this.app.reinitPhases()
+  }
+
   static definePhases(phases: RaphPhase[]): void {
     this.app.definePhases([
       //
@@ -57,7 +73,7 @@ export class Raph {
         routes: ['__signals.*'],
         nodes: (node: RaphNode) => node instanceof RaphSignal,
         each: (ctx: PhaseExecutorContext) => {
-          ;(ctx.node as RaphSignal<any>).update()
+          (ctx.node as RaphSignal<any>).update()
         },
       },
       //
@@ -69,7 +85,7 @@ export class Raph {
         routes: ['__signals.*'],
         nodes: (node: RaphNode) => node instanceof RaphEffect,
         each: (ctx: PhaseExecutorContext) => {
-          ;(ctx.node as RaphEffect).run()
+          (ctx.node as RaphEffect).run()
         },
       },
       //
@@ -81,7 +97,7 @@ export class Raph {
         routes: ['*'],
         nodes: (node: RaphNode) => node instanceof RaphWatch,
         each: (ctx: PhaseExecutorContext) => {
-          ;(ctx.node as RaphWatch).run(ctx)
+          (ctx.node as RaphWatch).run(ctx)
         },
       },
       //

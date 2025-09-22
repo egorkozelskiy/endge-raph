@@ -46,6 +46,61 @@ describe('DefaultDataAdapter get/set/merge/delete', () => {
     expect(adapter.get('rows[id=3].value')).toBe('hello')
   })
 
+  it('должен получать значение через get с params', () => {
+    const adapter = new DefaultDataAdapter({
+      rows: [{ id: 3, value: 'hello' }],
+    })
+    expect(
+      adapter.get('$datas[id=$dataId].rowsId', {
+        vars: {
+          datas: [
+            {
+              id: 'data1',
+              rowsId: 3,
+            },
+          ],
+          dataId: 'data1',
+        },
+      }),
+    ).toBe(3)
+  })
+
+  it('должен получать значение через get с params 2', () => {
+    const adapter = new DefaultDataAdapter({
+      FLT_ARR: {
+        legs: [{ id: 'SU1045_220925_AER_1' }],
+      },
+    })
+    expect(
+      adapter.get('$store.legs[$i].id', {
+        vars: {
+          legs: [{ id: 'SU1045_220925_AER_1' }],
+          i: 0,
+          store: 'FLT_ARR',
+        },
+      }),
+    ).toBe('SU1045_220925_AER_1')
+  })
+
+  it('должен получать значение через get с params_', () => {
+    const adapter = new DefaultDataAdapter({
+      rows: [{ id: 3, value: 'hello' }],
+    })
+    expect(
+      adapter.get('rows[id=$datas[id=$dataId].rowsId].value', {
+        vars: {
+          datas: [
+            {
+              id: 'data1',
+              rowsId: 3,
+            },
+          ],
+          dataId: 'data1',
+        },
+      }),
+    ).toBe('hello')
+  })
+
   it('должен возвращать undefined если элемент не найден', () => {
     const adapter = new DefaultDataAdapter({
       rows: [{ id: 3, value: 'hello' }],

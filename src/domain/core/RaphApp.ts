@@ -88,17 +88,35 @@ export class RaphApp {
    * Определяет все фазы разом.
    * Сохраняет их и в массив (для последовательного обхода),
    * и в Map (для быстрого доступа по имени).
+   * Также запускает инициализацию
    */
   definePhases(phases: RaphPhase[]): void {
     this._phasesArray = phases
+    this.reinitPhases()
+  }
+
+  addPhase(phase: RaphPhase): void {
+    this._phasesArray.push(phase)
+  }
+
+  clearPhases(): void {
+    this._phasesArray = []
+    this._phasesMap.clear()
+  }
+
+  /**
+   * Инициализация фаз.
+   * Подразумевается, что фазы уже добавлены в this._phasesArray
+   */
+  reinitPhases(): void {
     this._phasesMap.clear()
 
     this._phaseBits.clear()
-    phases.forEach((p, i) => this._phaseBits.set(p.name, 1 << i))
+    this._phasesArray.forEach((p, i) => this._phaseBits.set(p.name, 1 << i))
 
     // Пересобираем фазовый роутер с нуля: маска -> имя фазы
     this._phaseRouter = new RaphRouter<PhaseName>()
-    for (const phase of phases) {
+    for (const phase of this._phasesArray) {
       this._phasesMap.set(phase.name, phase)
       for (const mask of phase.routes ?? []) {
         // если список маршрутов пуст — фаза никогда не триггерится по данным
@@ -544,6 +562,10 @@ export class RaphApp {
     return this._dataAdapter.root()
   }
 
+  get graph(): DepGraph {
+    return this._graph
+  }
+
   get loopEnabled(): boolean {
     return this.__isLoopActive
   }
@@ -554,18 +576,6 @@ export class RaphApp {
 
   get minUpdateInterval(): number {
     return this._minUpdateInterval
-  }
-
-  get weightLimit(): number {
-    return this._weightLimit
-  }
-
-  get maxDepth(): number {
-    return this._maxDepth
-  }
-
-  get totalBuckets(): number {
-    return this._totalBuckets
   }
 
   get dataAdapter(): DataAdapter {

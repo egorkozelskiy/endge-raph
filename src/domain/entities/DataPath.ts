@@ -130,6 +130,9 @@ export class DataPath {
     s = s.replace(/(^|\.)(\$[a-zA-Z_$][\w$]*)(?=\.|\[|$)/g, (_m, lead, v) => {
       const name = v.slice(1)
       const val = get(name)
+      if (typeof val !== 'number' && typeof val !== 'string') {
+        return `${lead}${v}`
+      }
       const key = String(val)
       if (!/^[a-zA-Z_$][\w$]*$/.test(key)) {
         throw new Error(
@@ -144,63 +147,125 @@ export class DataPath {
 
   private static _parseSegments(path: string): DataPathSegment[] {
     const segs: DataPathSegment[] = []
-    const re = /([^\.\[\]]+)|\[(.+?)\]/g
-    let m: RegExpExecArray | null
+    const n = path.length
+    let i = 0
 
-    while ((m = re.exec(path)) !== null) {
-      if (m[1]) {
-        const raw = m[1]
-        segs.push(
-          raw === '*'
-            ? { kind: SegKind.Wildcard }
-            : { kind: SegKind.Key, key: raw },
-        )
+    while (i < n) {
+      // пропускаем точки
+      if (path[i] === '.') {
+        i++
         continue
       }
 
-      const inner = m[2].trim()
+      // если начинается '[', парсим сбалансированный блок
+      if (path[i] === '[') {
+        i++ // пропустить '['
+        let depth = 1
+        const sb: string[] = []
+        while (i < n && depth > 0) {
+          const ch = path[i]
 
-      if (/^\$[A-Za-z_]\w*$/.test(inner)) {
-        // кодируем как Param со спец-ключом "$index"
-        segs.push({ kind: SegKind.Param, pkey: '$index', pval: inner })
-        continue
-      }
+          // кавычки: копируем содержимое включая экранирование
+          if (ch === '"' || ch === '\'') {
+            const q = ch
+            sb.push(ch)
+            i++
+            while (i < n) {
+              const c2 = path[i]
+              sb.push(c2)
+              i++
+              if (c2 === '\\') {
+                // если экранирование — захватим следующий символ тоже (если есть)
+                if (i < n) {
+                  sb.push(path[i])
+                  i++
+                }
+                continue
+              }
+              if (c2 === q) break
+            }
+            continue
+          }
 
-      if (inner === '*') {
-        segs.push({ kind: SegKind.Wildcard })
-        continue
-      }
+          if (ch === '[') {
+            depth++
+            sb.push(ch)
+            i++
+            continue
+          }
 
-      if (/^\d+$/.test(inner)) {
-        segs.push({ kind: SegKind.Index, index: Number(inner) })
-        continue
-      }
+          if (ch === ']') {
+            depth--
+            if (depth === 0) {
+              i++ // съели закрывающую ]
+              break
+            }
+            sb.push(ch)
+            i++
+            continue
+          }
 
-      // внутри DataPath._parseSegments, в блоке kv:
-      const kv = inner.match(/^([a-zA-Z_$][\w\d_$]*)\s*=\s*(.+)$/)
-      if (kv) {
-        const pkey = kv[1]
-        let rawVal = kv[2].trim()
-        const quoted =
-          (rawVal.startsWith('"') && rawVal.endsWith('"')) ||
-          (rawVal.startsWith('\'') && rawVal.endsWith('\''))
-        if (quoted) rawVal = rawVal.slice(1, -1)
+          sb.push(ch)
+          i++
+        }
 
-        // если rawVal — placeholder (начинается с '$'), запомним как строку '$name'
-        if (!quoted && rawVal.startsWith('$')) {
-          //
-          // Placeholder: сохраняем pval как строку с $ — признак плейсхолдера
-          segs.push({ kind: SegKind.Param, pkey, pval: rawVal })
+        const inner = sb.join('').trim()
+        if (inner.length === 0) continue
+
+        // numeric index?
+        if (/^\d+$/.test(inner)) {
+          segs.push({ kind: SegKind.Index, index: Number(inner) })
           continue
         }
 
-        const pval: ParamValue =
-          !quoted && /^\d+$/.test(rawVal) ? Number(rawVal) : rawVal
-        segs.push({ kind: SegKind.Param, pkey, pval })
+        // wildcard [*]
+        if (inner === '*') {
+          segs.push({ kind: SegKind.Wildcard })
+          continue
+        }
+
+        // placeholder like $name (index placeholder)
+        if (/^\$[A-Za-z_]\w*$/.test(inner)) {
+          segs.push({ kind: SegKind.Param, pkey: '$index', pval: inner })
+          continue
+        }
+
+        // param key=val (val may contain nested []/. etc.)
+        const kv = inner.match(/^([a-zA-Z_$][\w\d_$]*)\s*=\s*(.+)$/)
+        if (kv) {
+          const pkey = kv[1]
+          let rawVal = kv[2].trim()
+          const quoted =
+            (rawVal.startsWith('"') && rawVal.endsWith('"')) ||
+            (rawVal.startsWith('\'') && rawVal.endsWith('\''))
+          if (quoted) rawVal = rawVal.slice(1, -1)
+
+          if (!quoted && rawVal.startsWith('$')) {
+            segs.push({ kind: SegKind.Param, pkey, pval: rawVal })
+            continue
+          }
+
+          const pval: ParamValue =
+            !quoted && /^\d+$/.test(rawVal) ? Number(rawVal) : rawVal
+          segs.push({ kind: SegKind.Param, pkey, pval })
+          continue
+        }
+
+        // fallback — treat inner as key-like
+        segs.push({ kind: SegKind.Key, key: inner })
         continue
       }
 
-      segs.push({ kind: SegKind.Key, key: inner })
+      // иначе — читаем "дот-сегмент": все символы до точки или '['
+      const start = i
+      while (i < n && path[i] !== '.' && path[i] !== '[') i++
+      const raw = path.slice(start, i).trim()
+      if (raw.length === 0) continue
+
+      if (raw === '*') segs.push({ kind: SegKind.Wildcard })
+      else segs.push({ kind: SegKind.Key, key: raw })
+
+      continue
     }
 
     return segs

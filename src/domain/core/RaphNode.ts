@@ -74,6 +74,10 @@ export class RaphNode {
     this._weight = 0
   }
 
+  addMeta(key: string, value: unknown): void {
+    this._meta[key] = value
+  }
+
   //
   // ACCESS
   //

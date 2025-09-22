@@ -60,7 +60,20 @@ export class DefaultDataAdapter implements DataAdapter {
 
       switch (s.kind) {
         case SegKind.Key:
-          cur = cur[s.key as any]
+          const k = (s?.key || '') as string
+          if (k && k.startsWith('$')) {
+            const varName = k.slice(1)
+            if (
+              opts?.vars &&
+              Object.prototype.hasOwnProperty.call(opts.vars, varName)
+            ) {
+              // используем переменную как новую «базу» для дальнейшей навигации
+              cur = opts.vars[varName]
+              break
+            }
+            // если переменной нет — фоллбэк к обычному доступу по ключу "$name"
+          }
+          cur = cur?.[k as any]
           break
 
         case SegKind.Index:
@@ -71,7 +84,7 @@ export class DefaultDataAdapter implements DataAdapter {
           if (!Array.isArray(cur)) {
             throw new Error('get: параметризованный доступ ожидает массив')
           }
-          const idx = this._findIndexByParam(cur, s.pkey!, s.pval!)
+          const idx = this._findIndexByParam(cur, s.pkey!, s.pval!, opts)
           if (idx === -1) return undefined
           cur = cur[idx]
           break
@@ -154,7 +167,7 @@ export class DefaultDataAdapter implements DataAdapter {
           if (!Array.isArray(cur)) {
             throw new Error('set: параметризованный доступ ожидает массив')
           }
-          let idx = this._findIndexByParam(cur, s.pkey!, s.pval!)
+          let idx = this._findIndexByParam(cur, s.pkey!, s.pval!, opts)
           if (idx === -1) {
             if (!this._opts.autoCreate) {
               throw new Error(
@@ -205,7 +218,7 @@ export class DefaultDataAdapter implements DataAdapter {
           )
         }
 
-        let idx = this._findIndexByParam(cur, leaf.pkey!, leaf.pval!)
+        let idx = this._findIndexByParam(cur, leaf.pkey!, leaf.pval!, opts)
         if (idx === -1) {
           if (!this._opts.autoCreate) {
             throw new Error(
@@ -263,7 +276,7 @@ export class DefaultDataAdapter implements DataAdapter {
           break
         case SegKind.Param: {
           if (!Array.isArray(cur)) return
-          const idx = this._findIndexByParam(cur, s.pkey!, s.pval!)
+          const idx = this._findIndexByParam(cur, s.pkey!, s.pval!, opts)
           if (idx === -1) return
           cur = cur[idx]
           break
@@ -296,7 +309,7 @@ export class DefaultDataAdapter implements DataAdapter {
 
       case SegKind.Param: {
         if (!Array.isArray(cur)) return
-        const idx = this._findIndexByParam(cur, leaf.pkey!, leaf.pval!)
+        const idx = this._findIndexByParam(cur, leaf.pkey!, leaf.pval!, opts)
         if (idx === -1) return
         if (this._opts.arrayDelete === 'splice') cur.splice(idx, 1)
         else delete cur[idx]
@@ -323,11 +336,33 @@ export class DefaultDataAdapter implements DataAdapter {
     this.set(path, value)
   }
 
-  private _findIndexByParam(arr: any[], pkey: string, pval: unknown): number {
-    return arr.findIndex((el) => {
+  private _findIndexByParam(
+    arr: any[],
+    pkey: string,
+    pval: unknown,
+    opts?: {
+      vars?: Record<string, any>
+    },
+  ): number {
+    if (typeof pval === 'string' && pval.startsWith('$')) {
+      pval = this.get(pval, opts)
+    }
+
+    let ind = arr.findIndex((el) => {
       if (!this._isPlainObject(el)) return false
       return (el as any)[pkey] === pval
     })
+
+    // Попытка вычислить выражение
+    if (ind === -1) {
+      pval = this.get(pval, opts)
+      ind = arr.findIndex((el) => {
+        if (!this._isPlainObject(el)) return false
+        return (el as any)[pkey] === pval
+      })
+    }
+
+    return ind
   }
 
   private _isPlainObject(x: unknown): x is Record<string, unknown> {
