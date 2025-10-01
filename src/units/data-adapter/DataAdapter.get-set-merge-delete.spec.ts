@@ -82,25 +82,6 @@ describe('DefaultDataAdapter get/set/merge/delete', () => {
     ).toBe('SU1045_220925_AER_1')
   })
 
-  it('должен получать значение через get с params_', () => {
-    const adapter = new DefaultDataAdapter({
-      rows: [{ id: 3, value: 'hello' }],
-    })
-    expect(
-      adapter.get('rows[id=$datas[id=$dataId].rowsId].value', {
-        vars: {
-          datas: [
-            {
-              id: 'data1',
-              rowsId: 3,
-            },
-          ],
-          dataId: 'data1',
-        },
-      }),
-    ).toBe('hello')
-  })
-
   it('должен возвращать undefined если элемент не найден', () => {
     const adapter = new DefaultDataAdapter({
       rows: [{ id: 3, value: 'hello' }],

@@ -25,6 +25,7 @@
     "build": "vue-tsc --noCheck && vite build",
     "preview": "vite preview",
     "test": "vitest",
+    "bench": "vitest bench",
     "publish": "npm publish --access public"
   },
   "devDependencies": {

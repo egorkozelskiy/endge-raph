@@ -54,8 +54,13 @@ export interface DataAdapter {
 export interface DefaultAdapterOptions {
   /** Как удалять из массивов: удалить элемент (splice) или оставить дырку (unset). */
   arrayDelete?: 'splice' | 'unset'
+
   /** Создавать промежуточные контейнеры: объект или массив определяется типом следующего сегмента. */
   autoCreate?: boolean
+
+  /** Ленивая индексация массивов для arr[pkey=pval] */
+  indexEnabled?: boolean
+  indexStrategy: 'lazy-key' | 'eager-all-keys'
 }
 
 /**
