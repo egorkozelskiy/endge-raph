@@ -9,6 +9,7 @@ import type { Branded } from '@/domain/types/brand.types'
  * Настройки RaphApp
  */
 export interface RaphOptions {
+  debug: boolean
   maxUps: number
   scheduler: SchedulerType
   adapter: DataAdapter
@@ -44,6 +45,7 @@ export interface DataAdapter {
     value: unknown,
     opts?: { vars?: Record<string, any> },
   ): void
+  indexOf(path: DataPathDef, opts?: { vars?: Record<string, any> }): number
 }
 
 /**

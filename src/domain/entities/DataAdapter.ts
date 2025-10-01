@@ -93,6 +93,7 @@ export class DefaultDataAdapter implements DataAdapter {
         case SegKind.Wildcard:
           // По требованиям CRUD с одиночным wildcard не поддерживаем.
           // (Даже в get — чтобы поведение было консистентным.)
+          console.error(path)
           throw new Error('get: wildcard "*" без параметров не поддерживается')
       }
     }
@@ -334,6 +335,65 @@ export class DefaultDataAdapter implements DataAdapter {
       return
     }
     this.set(path, value)
+  }
+
+  /** Вернуть индекс элемента массива, на который указывает путь (если последний сегмент — Index/Param). */
+  indexOf(path: DataPathDef, opts?: { vars?: Record<string, any> }): number {
+    const segs = DataPath.from(path, opts).segments()
+    if (segs.length === 0) return -1
+
+    let cur: any = this._root
+
+    for (let i = 0; i < segs.length; i++) {
+      const s = segs[i]
+      const last = i === segs.length - 1
+
+      switch (s.kind) {
+        case SegKind.Key: {
+          const k = (s.key || '') as string
+          if (k && k.startsWith('$')) {
+            const varName = k.slice(1)
+            if (
+              opts?.vars &&
+              Object.prototype.hasOwnProperty.call(opts.vars, varName)
+            ) {
+              // используем переменную как новую «базу» для дальнейшей навигации
+              cur = opts.vars[varName]
+              break
+            }
+            // если переменной нет — фоллбэк к обычному доступу по ключу "$name"
+          }
+          cur = cur?.[k as any]
+          if (cur == null) return -1
+          break
+        }
+
+        case SegKind.Index: {
+          if (!Array.isArray(cur)) return -1
+          if (last) return s.index as number
+          cur = cur[s.index as number]
+          if (cur == null) return -1
+          break
+        }
+
+        case SegKind.Param: {
+          if (!Array.isArray(cur)) return -1
+          // _findIndexByParam сам умеет разворачивать строковые $-выражения через get()
+          const idx = this._findIndexByParam(cur, s.pkey!, s.pval!, opts)
+          if (idx === -1) return -1
+          if (last) return idx
+          cur = cur[idx]
+          if (cur == null) return -1
+          break
+        }
+
+        case SegKind.Wildcard:
+          // По требованиям — wildcard без параметров не поддерживаем для CRUD/поиска индекса
+          return -1
+      }
+    }
+
+    return -1
   }
 
   private _findIndexByParam(

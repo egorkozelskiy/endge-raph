@@ -16,13 +16,18 @@ import { RaphEffect } from '@/domain/reactivity/RaphEffect'
 import { RaphWatch } from '@/domain/reactivity/RaphWatch'
 import { DataPath } from '@/domain/entities/DataPath'
 import type { WatchCallback } from '@/domain/types/reactive.types'
+import { RaphDebug } from '@/domain/core/RaphDebug'
+import { EventBus } from '@/utils/EventBus'
+import type { RaphEventPayloads } from '@/domain/types/events.types'
 
 export class Raph {
   //
   // Core данные
   //
   private static _app = new RaphApp()
+  private static _debug = new RaphDebug()
   private static _contextStack: RaphNode[] = []
+  private static _events = new EventBus<RaphEventPayloads>()
 
   //
   // Системные генераторы
@@ -35,7 +40,7 @@ export class Raph {
   // Инициализация
   //
   static {
-    this.definePhases([])
+    // this.definePhases([])
   }
 
   //
@@ -63,6 +68,8 @@ export class Raph {
   }
 
   static definePhases(phases: RaphPhase[]): void {
+    this.app.definePhases(phases)
+    return
     this.app.definePhases([
       //
       // Фаза обработки computed значений
@@ -229,6 +236,14 @@ export class Raph {
 
   static get app(): RaphApp {
     return Raph._app
+  }
+
+  static get debug(): RaphDebug {
+    return Raph._debug
+  }
+
+  static get events(): EventBus<RaphEventPayloads> {
+    return Raph._events
   }
 
   static get data(): DataObject {

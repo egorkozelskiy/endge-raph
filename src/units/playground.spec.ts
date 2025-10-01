@@ -1,7 +1,8 @@
-import { describe, it } from 'vitest'
+import { describe, expect, it } from 'vitest'
 import { SchedulerType } from '@/domain/types/base.types'
 import { RaphNode } from '@/domain/core/RaphNode'
 import { Raph } from '@/domain/core/Raph'
+import { RaphRouter } from '@/domain/core/RaphRouter'
 
 describe('RaphApp Base', () => {
   it('base', () => {
@@ -42,5 +43,20 @@ describe('RaphApp Base', () => {
     })
     console.log('--------')
     Raph.set('FLT_ARR.legs[id=1].name', 'second')
+  })
+
+  function expectSetEqual<T>(set: Set<T>, arr: T[]): void {
+    expect(set.size).toBe(arr.length)
+    for (const v of arr) expect(set.has(v)).toBe(true)
+  }
+
+  it('matches exact keys', () => {
+    const router = new RaphRouter()
+    router.add('FLT_ARR.attrs[*].items[name="ArrivalModelType"].text[*]', 'H1')
+
+    expectSetEqual(
+      router.match('FLT_ARR.attrs[*].items[name="ArrivalModelType"].text'),
+      ['H1'],
+    )
   })
 })

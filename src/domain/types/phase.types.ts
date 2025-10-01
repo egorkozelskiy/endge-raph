@@ -17,13 +17,25 @@ export type Traversal =
   | 'dirty-and-up' // грязная + подниматься к предкам (bottom-up)
   | 'all' // все ноды в графе, начиная с _root
 
+// Формат записи resolved
+export type ResolvedEntry = {
+  segment: string // имя контейнера, например "attrs" или "legs"
+  keyField: string // pk/fk имя, например "legId"
+  keyValue: unknown // исходное значение pval (строка с $ тоже норм), полезно для отладки
+  index: number // индекс найденного элемента массива, -1 если не нашли
+}
+
 //
 export type PhaseEvent = {
   // исходный путь события
-  path: DataPath
+  original: string
+  canonical: string
+  canonicalDataPath: DataPath
+
+  resolved: ResolvedEntry[]
 
   // захваченные параметры (если были)
-  params?: Record<string, unknown>
+  // params?: Record<string, unknown>
 }
 
 /**
